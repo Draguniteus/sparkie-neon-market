@@ -6,33 +6,16 @@
   <title>Sparkie — Neon Cyberpunk Market</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+    body { overflow: hidden; background: #050510; font-family: 'Courier New', monospace; }
     canvas { display: block; }
-    #hint {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      color: rgba(0,255,200,0.5); font-size: 12px; letter-spacing: 0.1em;
-      pointer-events: none; transition: opacity 2s ease;
-    }
-    #title {
-      position: fixed; top: 20px; left: 20px;
-      color: rgba(0,255,200,0.6); font-size: 11px; letter-spacing: 0.2em;
-      text-transform: uppercase;
-    }
+    #hint { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); color: rgba(0,255,200,0.4); font-size: 12px; letter-spacing: 0.08em; pointer-events: none; opacity: 1; transition: opacity 2s ease; }
+    #title { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: rgba(0,255,200,0.4); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; }
   </style>
 </head>
 <body>
-<div id="title">⚡ NEON MARKET // 2087 ⚡</div>
+<div id="title">🌃 NEON CYBERPUNK MARKET 🏮</div>
 <div id="hint">drag to orbit</div>
-
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
-
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -40,7 +23,6 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// ── RENDERER ──────────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -48,477 +30,287 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 document.body.appendChild(renderer.domElement);
 
-// ── SCENE ─────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000308, 0.025);
+scene.background = new THREE.Color(0x050510);
+scene.fog = new THREE.FogExp2(0x050510, 0.02);
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 400);
-camera.position.set(0, 8, 28);
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 300);
+camera.position.set(0, 10, 30);
 
-// ── CONTROLS ─────────────────────────────────────────────────────
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.maxPolarAngle = Math.PI * 0.6;
-controls.minDistance = 10;
-controls.maxDistance = 60;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.2;
+controls.autoRotateSpeed = 0.12;
+controls.maxPolarAngle = Math.PI * 0.6;
+controls.minDistance = 8;
+controls.maxDistance = 55;
 
-// ── POST PROCESSING ──────────────────────────────────────────────
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.6, 0.1);
-composer.addPass(bloom);
+composer.addPass(new THREE.RenderPass(scene, camera));
+composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.5, 0.4, 0.05));
 
-// ── BACKGROUND ─────────────────────────────────────────────────────
-scene.background = new THREE.Color(0x000308);
+scene.add(new THREE.AmbientLight(0x0a0a20, 0.3));
 
-// ── LIGHTS ─────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0x001122, 1.2));
-
-const mainLight = new THREE.DirectionalLight(0x0088ff, 0.6);
-mainLight.position.set(5, 20, 10);
-scene.add(mainLight);
-
-// Neon sign lights
-const neonColors = [0xff0080, 0x00ff80, 0x8000ff, 0xff8000, 0x00ffff, 0xff4040, 0x80ff00];
-neonColors.forEach((c, i) => {
-  const pl = new THREE.PointLight(c, 3.5, 20);
-  const angle = (i / neonColors.length) * Math.PI * 2;
-  pl.position.set(Math.cos(angle) * 18, 4 + Math.random() * 6, Math.sin(angle) * 18);
-  pl.userData.phase = i * 0.9;
-  scene.add(pl);
-});
-
-// ── GROUND (wet pavement) ────────────────────────────────────────
+// Street ground with glow strips
 {
-  const geo = new THREE.PlaneGeometry(120, 120, 1, 1);
-  const mat = new THREE.ShaderMaterial({
+  const groundGeo = new THREE.PlaneGeometry(60, 60, 60, 60);
+  const groundMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 } },
-    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `
-      uniform float uTime;
       varying vec2 vUv;
-      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
-      float noise(vec2 p) {
-        vec2 i = floor(p); vec2 f = fract(p);
-        vec2 u = f*f*(3.0-2.0*f);
-        return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);
-      }
+      uniform float uTime;
       void main() {
-        vec2 uv = vUv * 8.0;
-        float n = noise(uv + uTime * 0.1);
-        // Neon light reflections in puddles
-        float puddle = noise(uv * 0.5 + 3.7);
-        puddle = smoothstep(0.55, 0.75, puddle);
-        vec3 dark = vec3(0.01, 0.01, 0.04);
-        vec3 reflect = vec3(0.05, 0.02, 0.12);
-        vec3 col = mix(dark, reflect, puddle * 0.6);
-        // Grid lines
-        vec2 grid = abs(fract(vUv * 20.0 - 0.5) - 0.5);
-        float line = min(grid.x, grid.y);
-        col += vec3(0.0, 0.05, 0.1) * smoothstep(0.04, 0.0, line) * 0.3;
+        vec2 grid = abs(fract(vUv * 30.0) - 0.5);
+        float line = smoothstep(0.03, 0.06, min(grid.x, grid.y));
+        vec3 base = vec3(0.02, 0.02, 0.05);
+        vec3 lineCol = vec3(0.0, 0.8, 1.0) * (0.5 + 0.5 * sin(uTime * 0.5 + vUv.y * 10.0));
+        vec3 col = mix(lineCol * 0.3, base, line);
+        float dist = length(vUv - 0.5) * 2.0;
+        col *= (1.0 - dist * 0.7);
         gl_FragColor = vec4(col, 1.0);
       }
     `
   });
-  const ground = new THREE.Mesh(geo, mat);
+  const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = 0;
-  scene.add(ground);
   ground.userData.isGround = true;
+  scene.add(ground);
 }
 
-// ── BUILDINGS ─────────────────────────────────────────────────────
-const buildingMats = [
-  new THREE.MeshStandardMaterial({ color: 0x0a0a1a, roughness: 0.9, metalness: 0.1 }),
-  new THREE.MeshStandardMaterial({ color: 0x0d0d22, roughness: 0.85, metalness: 0.2 }),
-  new THREE.MeshStandardMaterial({ color: 0x080815, roughness: 0.95, metalness: 0.05 }),
-];
+// Market stalls
+const neonColors = [0xff0088, 0x00ffaa, 0x00aaff, 0xff8800, 0xaa00ff, 0xffff00];
+for (let s = 0; s < 12; s++) {
+  const angle = (s / 12) * Math.PI * 2;
+  const r = 12 + (s % 3) * 3;
+  const sx = Math.cos(angle) * r;
+  const sz = Math.sin(angle) * r;
+  
+  const stallGroup = new THREE.Group();
+  const color = neonColors[s % neonColors.length];
+  
+  // Stall frame
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.8, metalness: 0.3 });
+  stallGroup.add(new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 2), frameMat));
+  
+  // Supports
+  [[-1.3, -0.8], [1.3, -0.8], [-1.3, 0.8], [1.3, 0.8]].forEach(([lx, lz]) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), frameMat);
+    pole.position.set(lx, 1.5, lz);
+    stallGroup.add(pole);
+  });
+  
+  // Canopy with neon edge
+  const canopyGeo = new THREE.PlaneGeometry(3.5, 2.5);
+  const canopyMat = new THREE.MeshStandardMaterial({ color: 0x0a0a15, roughness: 0.9 });
+  const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+  canopy.position.y = 3;
+  canopy.rotation.x = -Math.PI * 0.1;
+  stallGroup.add(canopy);
+  
+  // Neon sign
+  const signGeo = new THREE.PlaneGeometry(2.5, 0.6);
+  const signMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2.0 });
+  const sign = new THREE.Mesh(signGeo, signMat);
+  sign.position.set(0, 2.2, 0.3);
+  sign.userData.isNeon = true;
+  stallGroup.add(sign);
+  
+  // Glow light
+  const glow = new THREE.PointLight(color, 2.5, 8);
+  glow.position.set(0, 2.5, 0);
+  stallGroup.add(glow);
+  
+  // Products on stall
+  for (let p = 0; p < 6; p++) {
+    const px = -1 + (p % 3) * 0.8;
+    const pz = -0.5 + Math.floor(p / 3) * 0.6;
+    const prod = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4 + Math.random() * 0.3, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.3),
+      new THREE.MeshStandardMaterial({ color: neonColors[(s + p) % neonColors.length], emissive: neonColors[(s + p) % neonColors.length], emissiveIntensity: 0.3 })
+    );
+    prod.position.set(px, 0.25, pz);
+    stallGroup.add(prod);
+  }
+  
+  stallGroup.position.set(sx, 0, sz);
+  stallGroup.rotation.y = angle + Math.PI / 2;
+  scene.add(stallGroup);
+}
 
-function makeBuilding(config) {
-  const group = new THREE.Group();
-  const mat = buildingMats[Math.floor(Math.random() * buildingMats.length)];
-
-  // Main body
-  const body = new THREE.Mesh(new THREE.BoxGeometry(config.w, config.h, config.d), mat);
-  body.position.y = config.h / 2;
-  group.add(body);
-
-  // Windows grid
-  const winRows = Math.floor(config.h / 1.8);
-  const winCols = Math.floor(config.w / 1.5);
-  for (let r = 0; r < winRows; r++) {
-    for (let c = 0; c < winCols; c++) {
-      if (Math.random() < 0.6) {
-        const winH = 0.5 + Math.random() * 0.4;
-        const winW = 0.4 + Math.random() * 0.3;
-        const winColor = new THREE.Color(neonColors[Math.floor(Math.random() * neonColors.length)]);
-        const winMat = new THREE.MeshStandardMaterial({
-          color: winColor,
-          emissive: winColor,
-          emissiveIntensity: Math.random() < 0.3 ? 2.0 : 0.5,
-          roughness: 0.1
-        });
-        const win = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), winMat);
-        win.position.set(
-          (c - winCols/2 + 0.5) * 1.5,
-          1.0 + r * 1.8 + winH/2,
-          config.d/2 + 0.01
-        );
-        group.add(win);
+// Holographic billboard
+{
+  const billboardGroup = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, metalness: 0.5, roughness: 0.5 });
+  
+  billboardGroup.add(new THREE.Mesh(new THREE.BoxGeometry(10, 6, 0.3), frameMat));
+  
+  const screenGeo = new THREE.PlaneGeometry(9.5, 5.5);
+  const screenMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform float uTime;
+      void main() {
+        float scan = sin(vUv.y * 50.0 + uTime * 5.0) * 0.1 + 0.9;
+        float flicker = step(0.97, fract(uTime * 0.5 + vUv.x * 3.0)) * 0.3 + 0.7;
+        float g = sin(vUv.x * 10.0 + uTime) * sin(vUv.y * 8.0 + uTime * 1.5) * 0.5 + 0.5;
+        vec3 col = vec3(0.0, 0.8, 1.0) * g * scan * flicker;
+        col += vec3(1.0, 0.0, 0.5) * smoothstep(0.3, 0.35, vUv.x) * smoothstep(0.4, 0.35, vUv.x) * 0.5;
+        gl_FragColor = vec4(col, 0.9);
       }
-    }
-  }
-
-  // Neon signs
-  if (config.signs) {
-    config.signs.forEach(sign => {
-      const signGeo = new THREE.BoxGeometry(sign.w, sign.h, 0.15);
-      const signColor = neonColors[sign.colorIdx % neonColors.length];
-      const signMat = new THREE.MeshStandardMaterial({
-        color: signColor, emissive: signColor, emissiveIntensity: 2.5,
-        roughness: 0.1, metalness: 0.3
-      });
-      const signMesh = new THREE.Mesh(signGeo, signMat);
-      signMesh.position.set(sign.x, sign.y, config.d/2 + 0.1);
-      group.add(signMesh);
-
-      // Glow
-      const glowGeo = new THREE.BoxGeometry(sign.w + 0.2, sign.h + 0.2, 0.05);
-      const glowMat = new THREE.MeshStandardMaterial({
-        color: signColor, emissive: signColor, emissiveIntensity: 1.0,
-        transparent: true, opacity: 0.3
-      });
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.copy(signMesh.position);
-      glow.position.z += 0.05;
-      group.add(glow);
-    });
-  }
-
-  // Rooftop elements
-  if (config.h > 12) {
-    const antennaGeo = new THREE.CylinderGeometry(0.05, 0.08, 4, 6);
-    const antennaMat = new THREE.MeshStandardMaterial({ color: 0x333344, roughness: 0.8 });
-    const antenna = new THREE.Mesh(antennaGeo, antennaMat);
-    antenna.position.set(0, config.h + 2, 0);
-    group.add(antenna);
-
-    const lightGeo = new THREE.SphereGeometry(0.12, 8, 8);
-    const lightMat = new THREE.MeshStandardMaterial({
-      color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 3.0
-    });
-    const light = new THREE.Mesh(lightGeo, lightMat);
-    light.position.set(0, config.h + 4, 0);
-    group.add(light);
-  }
-
-  group.position.copy(config.pos);
-  return group;
-}
-
-// Building layout
-const buildingConfigs = [
-  // Front row
-  { pos: new THREE.Vector3(-16, 0, -8), w: 8, h: 22, d: 7, signs: [{w:3,h:1.2,x:0,y:16,colorIdx:0},{w:2,h:0.8,x:-1,y:10,colorIdx:2}] },
-  { pos: new THREE.Vector3(-5, 0, -10), w: 10, h: 18, d: 8, signs: [{w:4,h:1.5,x:0,y:13,colorIdx:1}] },
-  { pos: new THREE.Vector3(8, 0, -9), w: 9, h: 25, d: 7, signs: [{w:3,h:1,x:0,y:18,colorIdx:3},{w:2,h:0.7,x:1,y:8,colorIdx:5}] },
-  { pos: new THREE.Vector3(19, 0, -7), w: 7, h: 15, d: 6, signs: [{w:2.5,h:1,x:0,y:10,colorIdx:4}] },
-  // Back row
-  { pos: new THREE.Vector3(-12, 0, -22), w: 8, h: 30, d: 8, signs: [{w:3.5,h:1.2,x:0,y:22,colorIdx:6},{w:2,h:0.8,x:-1,y:12,colorIdx:1}] },
-  { pos: new THREE.Vector3(4, 0, -24), w: 11, h: 28, d: 9, signs: [{w:5,h:1.5,x:0,y:20,colorIdx:0}] },
-  { pos: new THREE.Vector3(16, 0, -20), w: 8, h: 20, d: 7, signs: [{w:3,h:1,x:0,y:14,colorIdx:3}] },
-  // Side buildings
-  { pos: new THREE.Vector3(-24, 0, -16), w: 7, h: 16, d: 8, signs: [{w:2.5,h:1,x:0,y:11,colorIdx:2}] },
-  { pos: new THREE.Vector3(25, 0, -14), w: 6, h: 14, d: 7, signs: [{w:2,h:0.8,x:0,y:9,colorIdx:5}] },
-];
-buildingConfigs.forEach(cfg => scene.add(makeBuilding(cfg)));
-
-// ── FLYING CARS ───────────────────────────────────────────────────
-{
-  const carGroup = new THREE.Group();
-  const carColors = [0xff3366, 0x33ff99, 0x3399ff, 0xffcc00, 0xff6600];
+    `,
+    transparent: true
+  });
+  const screen = new THREE.Mesh(screenGeo, screenMat);
+  screen.position.z = 0.2;
+  screen.userData.isScreen = true;
+  billboardGroup.add(screen);
   
-  for (let i = 0; i < 12; i++) {
-    const carGeo = new THREE.BoxGeometry(1.8, 0.5, 0.9);
-    const color = carColors[i % carColors.length];
-    const carMat = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.8,
-      roughness: 0.2, metalness: 0.9
-    });
-    const car = new THREE.Mesh(carGeo, carMat);
-    
-    // Cockpit
-    const cockpitGeo = new THREE.SphereGeometry(0.45, 8, 8);
-    const cockpitMat = new THREE.MeshStandardMaterial({
-      color: 0x88ccff, emissive: 0x4466ff, emissiveIntensity: 0.3,
-      transparent: true, opacity: 0.7, roughness: 0.0, metalness: 0.1
-    });
-    const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
-    cockpit.scale.set(1, 0.6, 0.85);
-    cockpit.position.y = 0.35;
-    car.add(cockpit);
-
-    // Thruster glow
-    const thrustGeo = new THREE.CylinderGeometry(0.12, 0.18, 0.4, 8);
-    const thrustMat = new THREE.MeshStandardMaterial({
-      color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 3.0,
-      transparent: true, opacity: 0.8
-    });
-    const thrust = new THREE.Mesh(thrustGeo, thrustMat);
-    thrust.rotation.x = Math.PI / 2;
-    thrust.position.z = 0.55;
-    car.add(thrust);
-
-    // Random position and trajectory
-    const radius = 20 + Math.random() * 25;
-    const angle = Math.random() * Math.PI * 2;
-    const height = 6 + Math.random() * 12;
-    car.position.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
-    car.rotation.y = angle + Math.PI / 2;
-    
-    car.userData.angle = angle;
-    car.userData.radius = radius;
-    car.userData.height = height;
-    car.userData.speed = 0.1 + Math.random() * 0.15;
-    
-    carGroup.add(car);
-  }
-  scene.add(carGroup);
-}
-
-// ── HOLOGRAPHIC SIGNS ─────────────────────────────────────────────
-{
-  const holoGroup = new THREE.Group();
-  const holoColors = [0x00ffff, 0xff00ff, 0x00ff88];
+  // Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 8, 8), frameMat);
+  pole.position.y = -7;
+  billboardGroup.add(pole);
   
-  for (let i = 0; i < 8; i++) {
-    const h = 3 + Math.random() * 4;
-    const w = 2 + Math.random() * 3;
-    const geo = new THREE.PlaneGeometry(w, h);
-    const color = holoColors[i % holoColors.length];
-    const mat = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(color) } },
-      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `
-        uniform float uTime;
-        uniform vec3 uColor;
-        varying vec2 vUv;
-        float random(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-        void main() {
-          float scan = sin(vUv.y * 20.0 + uTime * 5.0) * 0.5 + 0.5;
-          float flicker = random(vec2(floor(uTime * 10.0), 0.0)) * 0.3 + 0.7;
-          float edge = smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x) *
-                       smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
-          float alpha = scan * 0.4 + 0.3;
-          alpha *= flicker;
-          alpha *= edge;
-          gl_FragColor = vec4(uColor, alpha * 0.7);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    const angle = (i / 8) * Math.PI * 2;
-    mesh.position.set(Math.cos(angle) * 14, 3 + i * 0.5, Math.sin(angle) * 14);
-    mesh.rotation.y = -angle + Math.PI / 2;
-    holoGroup.add(mesh);
-  }
-  scene.add(holoGroup);
+  billboardGroup.position.set(0, 10, -20);
+  billboardGroup.userData.isBillboard = true;
+  scene.add(billboardGroup);
 }
 
-// ── RAIN PARTICLES ────────────────────────────────────────────────
+// Floating drones
+for (let d = 0; d < 8; d++) {
+  const droneGroup = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2a3a, metalness: 0.6, roughness: 0.4 });
+  
+  droneGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), bodyMat));
+  
+  // Arms
+  for (let a = 0; a < 4; a++) {
+    const armAngle = (a / 4) * Math.PI * 2;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.05), bodyMat);
+    arm.position.set(Math.cos(armAngle) * 0.3, 0, Math.sin(armAngle) * 0.3);
+    arm.rotation.y = armAngle;
+    droneGroup.add(arm);
+    
+    // Propeller glow
+    const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2.0 }));
+    prop.position.set(Math.cos(armAngle) * 0.6, 0.1, Math.sin(armAngle) * 0.6);
+    droneGroup.add(prop);
+  }
+  
+  // Eye glow
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff0044, emissive: 0xff0044, emissiveIntensity: 3.0 }));
+  eye.position.z = 0.3;
+  droneGroup.add(eye);
+  
+  droneGroup.position.set((Math.random() - 0.5) * 40, 8 + Math.random() * 8, (Math.random() - 0.5) * 40);
+  droneGroup.userData = { baseY: droneGroup.position.y, phase: Math.random() * Math.PI * 2 };
+  scene.add(droneGroup);
+}
+
+// Rain
 {
   const rainCount = 3000;
-  const pos = new Float32Array(rainCount * 3);
+  const rainPos = new Float32Array(rainCount * 3);
+  const rainVel = new Float32Array(rainCount);
   for (let i = 0; i < rainCount; i++) {
-    pos[i*3]   = (Math.random() - 0.5) * 80;
-    pos[i*3+1] = Math.random() * 40;
-    pos[i*3+2] = (Math.random() - 0.5) * 80;
+    rainPos[i*3] = (Math.random() - 0.5) * 80;
+    rainPos[i*3+1] = Math.random() * 40;
+    rainPos[i*3+2] = (Math.random() - 0.5) * 80;
+    rainVel[i] = 0.2 + Math.random() * 0.3;
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
   const rainMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 } },
-    vertexShader: `
-      attribute vec3 position;
-      uniform float uTime;
-      varying float vAlpha;
-      void main() {
-        float speed = 12.0;
-        float y = position.y - uTime * speed;
-        float modY = mod(y, 40.0);
-        vAlpha = 0.3 + 0.2 * sin(position.x * 0.1 + uTime);
-        gl_PointSize = 1.5;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x, modY, position.z, 1.0);
-      }
-    `,
-    fragmentShader: `
-      varying float vAlpha;
-      void main() {
-        float d = length(gl_PointCoord - 0.5);
-        if (d > 0.5) discard;
-        gl_FragColor = vec4(0.4, 0.6, 1.0, vAlpha * 0.5);
-      }
-    `,
-    transparent: true,
-    depthWrite: false
+    vertexShader: `uniform float uTime; attribute float vel; void main() { vec3 p = position; p.y = mod(p.y - uTime * vel * 15.0, 40.0); gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); gl_PointSize = 1.5; }`,
+    fragmentShader: `void main() { float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard; gl_FragColor = vec4(0.5, 0.7, 1.0, 0.4); }`,
+    transparent: true, depthWrite: false
   });
-  const rain = new THREE.Points(geo, rainMat);
+  const rain = new THREE.Points(rainGeo, rainMat);
+  rain.userData.vel = rainVel;
   rain.userData.isRain = true;
   scene.add(rain);
 }
 
-// ── NEON SIGN TEXT (using box geometry as letters) ─────────────────
+// Neon reflections on wet ground
 {
-  // Big "MARKET" sign using colored boxes
-  const signGroup = new THREE.Group();
-  const signColors = [0xff0080, 0x00ff80, 0x8000ff, 0xff8000, 0x00ffff, 0xff0040];
-  const letters = ['M','A','R','K','E','T'];
-  const letterSpacing = 2.2;
-  letters.forEach((l, i) => {
-    const c = signColors[i];
-    const mat = new THREE.MeshStandardMaterial({
-      color: c, emissive: c, emissiveIntensity: 3.0, roughness: 0.1
-    });
-    // Simple box for each "letter"
-    const boxGeo = new THREE.BoxGeometry(1.5, 2.0, 0.3);
-    const box = new THREE.Mesh(boxGeo, mat);
-    box.position.x = i * letterSpacing - (letters.length * letterSpacing / 2);
-    box.position.y = 0;
-    signGroup.add(box);
-
-    // Glow halo
-    const haloGeo = new THREE.BoxGeometry(1.7, 2.2, 0.1);
-    const haloMat = new THREE.MeshStandardMaterial({
-      color: c, emissive: c, emissiveIntensity: 1.0,
-      transparent: true, opacity: 0.25
-    });
-    const halo = new THREE.Mesh(haloGeo, haloMat);
-    halo.position.copy(box.position);
-    halo.position.z -= 0.2;
-    signGroup.add(halo);
+  const reflectCount = 100;
+  const reflectPos = new Float32Array(reflectCount * 3);
+  for (let i = 0; i < reflectCount; i++) {
+    reflectPos[i*3] = (Math.random() - 0.5) * 40;
+    reflectPos[i*3+1] = 0.02;
+    reflectPos[i*3+2] = (Math.random() - 0.5) * 40;
+  }
+  const reflectGeo = new THREE.BufferGeometry();
+  reflectGeo.setAttribute('position', new THREE.BufferAttribute(reflectPos, 3));
+  const reflectMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: `uniform float uTime; void main() { gl_PointSize = 20.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uTime; void main() { float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard; float a = (1.0 - d * 2.0) * 0.15; vec3 col = vec3(0.0, 1.0, 0.8); gl_FragColor = vec4(col, a); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
   });
-  signGroup.position.set(0, 14, -7.5);
-  scene.add(signGroup);
+  const reflections = new THREE.Points(reflectGeo, reflectMat);
+  reflections.userData.isReflections = true;
+  scene.add(reflections);
 }
 
-// ── STREET VENDOR STALLS ──────────────────────────────────────────
-{
-  for (let i = 0; i < 6; i++) {
-    const stallGroup = new THREE.Group();
-    const angle = (i / 6) * Math.PI * 2;
-    const radius = 8;
-    
-    // Canopy
-    const colors2 = [0xff0080, 0x00ff80, 0x8000ff, 0xff8000];
-    const canopyColor = colors2[i % colors2.length];
-    const canopyMat = new THREE.MeshStandardMaterial({
-      color: canopyColor, emissive: canopyColor, emissiveIntensity: 0.4,
-      roughness: 0.8, side: THREE.DoubleSide
-    });
-    const canopy = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), canopyMat);
-    canopy.position.y = 3;
-    canopy.rotation.x = -0.3;
-    stallGroup.add(canopy);
-
-    // Table
-    const tableMat = new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.9 });
-    const table = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 1.5), tableMat);
-    table.position.y = 1.8;
-    stallGroup.add(table);
-
-    // Products (glowing items on table)
-    for (let p = 0; p < 5; p++) {
-      const pColor = neonColors[Math.floor(Math.random() * neonColors.length)];
-      const pMat = new THREE.MeshStandardMaterial({
-        color: pColor, emissive: pColor, emissiveIntensity: 1.5
-      });
-      const pGeo = Math.random() < 0.5 ? new THREE.OctahedronGeometry(0.15) : new THREE.BoxGeometry(0.2, 0.2, 0.2);
-      const product = new THREE.Mesh(pGeo, pMat);
-      product.position.set((Math.random() - 0.5) * 2, 2.0, (Math.random() - 0.5) * 1);
-      stallGroup.add(product);
-    }
-
-    // Poles
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.8 });
-    [-1.2, 1.2].forEach(x => {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.5, 6), poleMat);
-      pole.position.set(x, 1.75, 0);
-      stallGroup.add(pole);
-    });
-
-    stallGroup.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-    stallGroup.rotation.y = -angle + Math.PI;
-    scene.add(stallGroup);
+// Skyline buildings
+for (let b = 0; b < 20; b++) {
+  const angle = (b / 20) * Math.PI * 2;
+  const r = 40 + Math.random() * 15;
+  const height = 8 + Math.random() * 20;
+  const bGeo = new THREE.BoxGeometry(3 + Math.random() * 4, height, 3 + Math.random() * 4);
+  const bMat = new THREE.MeshStandardMaterial({ color: 0x0a0a15, roughness: 0.8, metalness: 0.3 });
+  const building = new THREE.Mesh(bGeo, bMat);
+  building.position.set(Math.cos(angle) * r, height / 2, Math.sin(angle) * r);
+  scene.add(building);
+  
+  // Window lights
+  for (let w = 0; w < 8; w++) {
+    if (Math.random() > 0.6) continue;
+    const winMat = new THREE.MeshStandardMaterial({ color: neonColors[Math.floor(Math.random() * neonColors.length)], emissive: neonColors[Math.floor(Math.random() * neonColors.length)], emissiveIntensity: 2.0 });
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), winMat);
+    const side = Math.floor(Math.random() * 4);
+    const wh = Math.random() * height * 0.8;
+    const ww = (Math.random() - 0.5) * 3;
+    if (side === 0) { win.position.set(ww, wh, 1.7); }
+    else if (side === 1) { win.position.set(ww, wh, -1.7); win.rotation.y = Math.PI; }
+    else if (side === 2) { win.position.set(1.7, wh, ww); win.rotation.y = Math.PI / 2; }
+    else { win.position.set(-1.7, wh, ww); win.rotation.y = -Math.PI / 2; }
+    building.add(win);
   }
 }
 
-// ── ANIMATION ─────────────────────────────────────────────────────
 const clock = new THREE.Clock();
-const pointLights = scene.children.filter(c => c.isPointLight);
-
 function animate() {
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
-
-  // Animate neon lights
-  pointLights.forEach(light => {
-    light.intensity = 3.5 + Math.sin(t * 1.5 + light.userData.phase) * 1.2;
-  });
-
-  // Animate rain
+  
   scene.traverse(obj => {
-    if (obj.isPoints && obj.userData.isRain && obj.material.uniforms?.uTime) {
-      obj.material.uniforms.uTime.value = t;
+    if (obj.userData.isGround && obj.material?.uniforms?.uTime) obj.material.uniforms.uTime.value = t;
+    if (obj.userData.isNeon) obj.material.emissiveIntensity = 1.5 + Math.sin(t * 4) * 0.5;
+    if (obj.userData.isScreen && obj.material?.uniforms?.uTime) obj.material.uniforms.uTime.value = t;
+    if (obj.userData.isRain) obj.material.uniforms.uTime.value = t;
+    if (obj.userData.isReflections) obj.material.uniforms.uTime.value = t;
+    if (obj.userData.baseY !== undefined) {
+      obj.position.y = obj.userData.baseY + Math.sin(t * 2 + obj.userData.phase) * 0.5;
     }
   });
-
-  // Animate holographic signs
-  scene.traverse(obj => {
-    if (obj.isMesh && obj.material?.uniforms?.uColor && obj.material.uniforms.uColor.value.r === 0) {
-      // holos
-      if (obj.material.uniforms.uTime) obj.material.uniforms.uTime.value = t;
-    }
-  });
-
-  // Animate flying cars
-  carGroup.children.forEach(car => {
-    car.userData.angle += car.userData.speed * 0.01;
-    const a = car.userData.angle;
-    car.position.x = Math.cos(a) * car.userData.radius;
-    car.position.z = Math.sin(a) * car.userData.radius;
-    car.position.y = car.userData.height + Math.sin(t * 0.5 + car.userData.angle) * 0.5;
-    car.rotation.y = a + Math.PI / 2;
-    car.rotation.z = Math.sin(t * 0.8 + car.userData.angle * 3) * 0.05;
-  });
-
-  // Ground shader time
-  scene.traverse(obj => {
-    if (obj.isMesh && obj.userData.isGround && obj.material.uniforms?.uTime) {
-      obj.material.uniforms.uTime.value = t;
-    }
-  });
-
+  
   controls.update();
   composer.render();
 }
-
-const carGroup = scene.children.find(c => c.isGroup && c.children[0]?.isMesh && c.children[0]?.geometry?.type === 'BoxGeometry');
 animate();
 
-// ── RESIZE ───────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
 });
-
 setTimeout(() => { document.getElementById('hint').style.opacity = '0'; }, 5000);
 </script>
 </body>
